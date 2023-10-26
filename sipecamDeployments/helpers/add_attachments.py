@@ -6,7 +6,7 @@ def add_attachments(report,content):
             report (dict):  A dict containing the report data
                             of the survey for a specific device
             content (list): A list containing info of the survey.
-        
+
         Returns:
             metadata (string):  A string containing the attachment urls
                                 in a json structure.
@@ -24,11 +24,11 @@ def add_attachments(report,content):
                 field_label = list(
                                     filter(lambda question: "name" in question and question['name'] == key, content))
                 field_name = field_label[0]["label"][0] if len(field_label) > 0 else key
-                metadata += ("pregunta_" + str(index) + ": { nombre: \"" + field_name +"\", "
-                   + "file_url: \"" + file["download_url"] + "\" }")
+                metadata += ("\"pregunta_" + str(index) + "\": { \"nombre\": \"" + field_name +"\", "
+                   + "\"file_url\": \"" + file["download_url"] + "\" }")
                 if idx != len(report["_attachments"]) - 1:
                    metadata += ", "
-        
+
         if len(metadata) < 3:
             for index, (key, value) in enumerate(report.items()):
                 if isinstance(value,list):
@@ -39,8 +39,8 @@ def add_attachments(report,content):
                                     field_label = list(
                                         filter(lambda question: "name" in question and question['name'] == name.split("/")[1], content))
                                     field_name = field_label[0]["label"][0] if len(field_label) > 0 else name
-                                    metadata += ("pregunta_" + str(index) + ": { nombre: \"" + field_name +"\", "
-                                       + "file_url: \"" + file["download_url"] + "\" }")
+                                    metadata += ("\"pregunta_" + str(index) + "\": { \"nombre\": \"" + field_name +"\", "
+                                       + "\"file_url\": \"" + file["download_url"] + "\" }")
                                     if idx != len(report["_attachments"]) - 1:
                                        metadata += ", "
 
