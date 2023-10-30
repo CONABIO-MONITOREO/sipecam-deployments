@@ -11,7 +11,7 @@ def get_field_name(key, field_label):
 
 def get_metadata_by_question(content, download_url, t):
     field_label = field_label_by_key(t[1][0], content)
-    field_name = field_label_by_key(t[1][0], field_label)
+    field_name = get_field_name(t[1][0], field_label)
     question = build_question_metadata(str(t[0]), field_name, download_url)
     return question
 
@@ -50,7 +50,7 @@ def add_attachments(report,content):
                     for i in value:
                         if isinstance(i,dict):
                             questions = []
-                            for i, (name,item) in enumerate(i.items()):
+                            for name, item in i.items():
                                 if isinstance(item,str) and item == filename:
                                     field_label = field_label_by_key(name.split("/")[1], content)
                                     field_name = get_field_name(name, field_label)
