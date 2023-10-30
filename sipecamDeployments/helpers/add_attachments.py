@@ -47,6 +47,7 @@ def add_attachments(report,content):
                 if isinstance(value,list):
                     for i in value:
                         if isinstance(i,dict):
+                            metadata += ", "
                             questions = []
                             for i, (name,item) in enumerate(i.items()):
                                 if isinstance(item,str) and item == filename:
