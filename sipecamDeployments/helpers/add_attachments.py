@@ -40,14 +40,15 @@ def add_attachments(report,content):
         filter_by_filename = list(filter(lambda t: isinstance(t[1][1], str) and t[1][1] == filename, items))
         get_question = partial(get_metadata_by_question, content, file["download_url"])
         questions = list(map(get_question, filter_by_filename))
-        metadata += ", ".join(questions)
+        metadata += ",".join(questions)
+        if idx != len(report["_attachments"]) - 1:
+            metadata += ","
 
         if len(metadata) < 3:
             for index, (key, value) in enumerate(report.items()):
                 if isinstance(value,list):
                     for i in value:
                         if isinstance(i,dict):
-                            metadata += ", "
                             questions = []
                             for i, (name,item) in enumerate(i.items()):
                                 if isinstance(item,str) and item == filename:
@@ -55,6 +56,9 @@ def add_attachments(report,content):
                                     field_name = get_field_name(name, field_label)
                                     questions.append(build_question_metadata(str(index), field_name, file["download_url"]))
                             metadata += ",".join(questions)
+                            if idx != len(report["_attachments"]) - 1:
+                                metadata += ","
+
     metadata += " }"
 
     return metadata
