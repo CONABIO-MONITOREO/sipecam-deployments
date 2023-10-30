@@ -38,7 +38,7 @@ def add_attachments(report,content):
         items = [(index, item) for index, item in enumerate(report.items())]
         filter_by_filename = list(filter(lambda t: isinstance(t[1][1], str) and t[1][1] == filename, items))
         get_question = partial(get_metadata_by_question, content, file["download_url"])
-        questions = map(get_question, filter_by_filename)
+        questions = list(map(get_question, filter_by_filename))
         metadata += ", ".join(questions)
 
         if len(metadata) < 3:
