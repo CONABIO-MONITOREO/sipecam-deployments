@@ -1,7 +1,7 @@
 from functools import partial
 
 def build_question_metadata(idx, field_name, download_url):
-    return "\"pregunta_{idx}\": {{\"nombre\": \"{field_name}\", \"file_url\":\"{download_url}\"}}".format(idx=idx, field_name=field_name, download_url=download_url)
+    return '"pregunta_{idx}": {{"nombre": "{field_name}", "file_url": "{download_url}"}}'.format(idx=idx, field_name=field_name, download_url=download_url)
 
 def field_label_by_key(key, content):
     return list(filter(lambda question: "name" in question and question["name"] == key, content))
