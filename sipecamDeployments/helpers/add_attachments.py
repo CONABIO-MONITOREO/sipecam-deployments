@@ -14,8 +14,6 @@ def get_metadata_by_question(content, download_url, t):
     field_name = field_label_by_key(t[1][0], field_label)
     question = build_question_metada(str(t[0]), field_name, download_url)
 
-def get_metadata_by_question(content)
-
 def add_attachments(report,content):
     """
         Add attachment url to metadata as a string
