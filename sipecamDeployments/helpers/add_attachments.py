@@ -13,6 +13,7 @@ def get_metadata_by_question(content, download_url, t):
     field_label = field_label_by_key(t[1][0], content)
     field_name = field_label_by_key(t[1][0], field_label)
     question = build_question_metadata(str(t[0]), field_name, download_url)
+    return question
 
 def add_attachments(report,content):
     """
