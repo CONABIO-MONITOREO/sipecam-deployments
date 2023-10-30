@@ -58,7 +58,8 @@ def add_attachments(report,content):
                             metadata += ",".join(questions)
                             if idx != len(report["_attachments"]) - 1:
                                 metadata += ","
-
-    metadata += " }"
+    while metadata.endswith(","):
+        metadata = metadata[:-1]
+    metadata += "}"
 
     return metadata
