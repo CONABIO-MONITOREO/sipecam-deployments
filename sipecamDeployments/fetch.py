@@ -61,7 +61,7 @@ def kobo_deployments():
 
         matched_deployments = match_deployment_to_node(clean_data,cumulus_data,session)
 
-        for depl in match_deployment_to_node(clean_data,cumulus_data,session):
+        for depl in matched_deployments:
             depl.update({"cumulus_name": cumulus_name})
             if "coordinates_warning" not in depl:
                 depl.update({"coordinates_warning": None})

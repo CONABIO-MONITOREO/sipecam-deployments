@@ -3,7 +3,7 @@ import json
 from sipecamDeployments.helpers import parse_to_utc, add_attachments
 
 """
-Clean kobo reports to better access the desired 
+Clean kobo reports to better access the desired
 data of the survey. This file contains a function
 for each type of survey, wheter to be a deployment
 survey, a individual survey, etc.
@@ -18,7 +18,7 @@ def parse_config(config, spectrum):
     warn = False
     warn_message = "Configuration needed manipulation to accomplish correct parsing. See original configuration text for reference."
     error_message = "Could not parse configuration text after correction attempts."
-    
+
     wmes = None
     emes = None
     config_ = remove_white_spaces(config[1])
@@ -50,17 +50,17 @@ def parse_config(config, spectrum):
                     config_ = "{"+spl[1]
                     return parse_config(config_, spectrum)
                 else:
-                    return None, config_text, warn_message, error_message 
+                    return None, config_text, warn_message, error_message
         warn = True
 
     if "No" in conf:
         info = conf["No"]
     else:
         info = conf["deviceInfo"]
-    
+
     if warn:
         wmes = warn_message
-    
+
     return info, config_text, wmes, None
 
 def clean_kobo_deployment_report(survey):
@@ -72,7 +72,7 @@ def clean_kobo_deployment_report(survey):
                             as well as its name and url.
 
     Returns:
-        clean_data (list):  A list containing the clean survey 
+        clean_data (list):  A list containing the clean survey
                             data.
     """
 
@@ -87,7 +87,7 @@ def clean_kobo_deployment_report(survey):
         if "c_mara_trampa" in report["Dispositivo"]:
             # obtaing kay-value pair for device serial question in survey
             serial = [(key, value) for key, value in report.items() if key.startswith("Registre_el_n_mero_s_e_la_C_mara_Trampa")]
-            
+
             if "Registre_la_ubicaci_n_de_la_C_mara" in report.keys():
                 """
                     If string matches, then cellphone was used for
@@ -123,23 +123,23 @@ def clean_kobo_deployment_report(survey):
             entries.append(data)
 
         elif "grabadora_audi" in report["Dispositivo"]:
-            ultrasonic_serial = [(key, value) for key, value in report.items() 
+            ultrasonic_serial = [(key, value) for key, value in report.items()
                     if key.startswith("Registre_el_n_mero_s_er_par_de_grabadoras")
                         or key.startswith("Registre_el_n_mero_s_do_par_de_grabadoras") and "001" in key][0]
-            audible_serial = [(key, value) for key, value in report.items() 
+            audible_serial = [(key, value) for key, value in report.items()
                     if key.startswith("Registre_el_n_mero_s_er_par_de_grabadoras")
                         or key.startswith("Registre_el_n_mero_s_do_par_de_grabadoras") and "001" not in key][0]
-            ultrasonic_config = [(key, value) for key, value in report.items() 
+            ultrasonic_config = [(key, value) for key, value in report.items()
                     if key.startswith("Copiar_y_pegar_texto_Sipecam") and "001" in key][0]
-            audible_config = [(key, value) for key, value in report.items() 
+            audible_config = [(key, value) for key, value in report.items()
                     if key.startswith("Copiar_y_pegar_texto_Sipecam") and "001" not in key][0]
 
             if gps[0][1] == "celular__recomendado":
                 """
-                    If string matches with gqp answer, then cellphone 
+                    If string matches with gqp answer, then cellphone
                     was used for location record
                 """
-                latlng = [(key, value) for key, value in report.items() 
+                latlng = [(key, value) for key, value in report.items()
                     if key.startswith("Registre_la_posici_n_er_par_de_grabadoras")
                         or key.startswith("Registre_la_posici_n_do_par_de_grabadoras")]
 
@@ -150,15 +150,15 @@ def clean_kobo_deployment_report(survey):
                     If not, then gps was used for location record,
                     and so, the lat/long was recorded in two fields
                 """
-                lat = [(key, value) for key, value in report.items() 
+                lat = [(key, value) for key, value in report.items()
                             if key.startswith("Latitud_en_grados_de_audible_ultras_nica")][0][1]
-                
+
                 # theres a typo for this question, so in order to obtain the data
                 # if has to check for the two strings, with typo and without it
-                lng = [(key, value) for key, value in report.items() 
-                            if key.startswith("Longitud_en_grados_d_audible_ultras_nica") 
+                lng = [(key, value) for key, value in report.items()
+                            if key.startswith("Longitud_en_grados_d_audible_ultras_nica")
                                 or key.startswith("Longituden_grados_de_audible_ultras_nica")][0][1]
-            
+
             udinfo, udtext, udinfo_warn, udinfo_error = parse_config(ultrasonic_config, "ultrasonic")
             if not udinfo_error:
                 ultrasonic_data = {
@@ -230,11 +230,11 @@ def clean_kobo_deployment_report(survey):
                     "latitude": lat,
                     "longitude": lng,
                     "metadata": add_attachments(report,survey["content"])
-                }                
-                    
+                }
+
             entries.append(audible_data)
 
-    
+
     return entries
 
 def clean_kobo_individual_report(survey):
@@ -246,22 +246,22 @@ def clean_kobo_individual_report(survey):
                             as well as its name and url.
 
     Returns:
-        clean_data (list):  A list containing the clean survey 
+        clean_data (list):  A list containing the clean survey
                             data.
     """
     entries = []
     for report in survey["reports"]:
         if "mouse_repeat" in report.keys():
             files = add_attachments(report,survey["content"])
-            
+
             for individual in report["mouse_repeat"]:
-                
+
                 data = {
                     "date_trap": parse_to_utc(report["Fecha_y_Hora"]),
                     "kobo_url": survey["kobo_url"],
                     "user": report["_submitted_by"]
                 }
-    
+
                 if report["_Registrar_el_sitio_con_GPS_o"] == "celular":
                     data.update({
                         "latitude": str(report["_geolocation"][0]),
@@ -270,7 +270,7 @@ def clean_kobo_individual_report(survey):
                 elif report["_Registrar_el_sitio_con_GPS_o"] == "gps":
                     lat = [(key, value) for key, value in report.items() if key.startswith("Latitud_en_grados_de_ales_de_la_trampa")][0][1]
                     lng = [(key, value) for key, value in report.items() if key.startswith("Longitud_en_grados_d_ales_de_la_trampa")][0][1]
-                    
+
                     data.update({
                         "latitude": lat,
                         "longitude": lng
@@ -281,15 +281,15 @@ def clean_kobo_individual_report(survey):
 
                 # fill with individual info the metadata field
                 # the metadata is build as a string, but holds a json
-                metadata = "{ archivos: " + files + ", caracteristicas: {"
+                metadata = "{ \"archivos\": " + files + ", \"caracteristicas\": {"
                 for idx,(q,ans) in enumerate(individual.items()):
                     question = q.split("/")[1]
                     field_label = list(
                                         filter(lambda question_label: "name" in question_label and question_label['name'] == question, survey["content"]))
                     field_name = (field_label[0]["label"][0] if "label" in field_label[0].keys() else question) if len(field_label) > 0 else question
                     if not question.startswith("Foto") or question != "c2" or question != "c3":
-                        metadata += "pregunta_" + str(idx) + ": { nombre: \"" + field_name + "\", respuesta: \"" + ans + "\"},"
-                
+                        metadata += "\"pregunta_" + str(idx) + "\": { \"nombre\": \"" + field_name + "\", respuesta: \"" + ans + "\"},"
+
                 metadata += "} }"
 
                 data.update({"metadata": metadata})
@@ -298,9 +298,9 @@ def clean_kobo_individual_report(survey):
                     data.update({
                         "arete": individual["mouse_repeat/Indique_el_n_mero_de_e_se_le_va_a_colocar"]
                     })
-                
+
                 entries.append(data)
-    
+
     return entries
 
 def clean_kobo_erie_report(survey):
@@ -312,7 +312,7 @@ def clean_kobo_erie_report(survey):
                             as well as its name and url.
 
     Returns:
-        clean_data (list):  A list containing the clean survey 
+        clean_data (list):  A list containing the clean survey
                             data.
     """
     entries = []
@@ -329,20 +329,20 @@ def clean_kobo_erie_report(survey):
             sum_veg_structure = [(key, value) for key, value in report.items() if re.match(regex_structure,key)][0][1]
         except:
             sum_veg_structure = "0"
-        
+
         try:
             regex_species = "suma([a-zA-Z_]*)especie_indicadora"
             sum_species = [(key, value) for key, value in report.items() if re.match(regex_species,key)][0][1]
-        except: 
+        except:
             sum_species = "0"
         try:
             regex_percentage = "porcentaje([a-zA-Z_]*)"
             percentage = [(key, value) for key, value in report.items() if re.match(regex_percentage,key)][0][1]
-        except: 
+        except:
             percentage = "0"
 
         sum_impact = [(key, value) for key, value in report.items() if key.startswith("suma_impacto")][0][1]
-        
+
         data.update({
             "sum_vegetation_structure": sum_veg_structure,
             "sum_indicator_species": sum_species,
@@ -360,7 +360,7 @@ def clean_kobo_erie_report(survey):
                 "latitude": report["Latitud_en_grados_decimales"],
                 "longitude": report["Longitud_en_grados_decimales"]
             })
-        
+
         entries.append(data)
-    
+
     return entries
