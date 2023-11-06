@@ -78,7 +78,7 @@ def add_attachments(report, content):
         url = _file['download_url']
         filename = _file['filename'].split('/')[4]
         filtered = filter_by_filename(filename, items)
-        get_question = partial(get_metada_by_question, content, url)
+        get_question = partial(get_metadata_by_question, content, url)
         qs = list(map(get_question, filtered))
         if qs:
             questions.extend(qs)
