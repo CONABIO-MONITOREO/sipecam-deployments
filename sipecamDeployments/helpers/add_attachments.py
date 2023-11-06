@@ -103,5 +103,5 @@ def add_attachments(report, content):
                         all_items.extend(all_questions)
             if all_items:
                 questions.extend(all_items)
-        metadata = '{' + ','.join(all_items) + '}'
+        metadata = '{' + ','.join(questions) + '}'
         return metadata
