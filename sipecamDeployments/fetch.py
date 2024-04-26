@@ -12,23 +12,10 @@ from sipecamDeployments.utils.match_deployment_to_node import *
 from sipecamDeployments.utils.login_to_zendro import *
 from sipecamDeployments.utils.clean_kobo_reports import *
 
-def kobo_deployments():
-    # Auth credentials for Kobo
-    auth = (os.getenv('KOBO_USER'), os.getenv('KOBO_PASSWORD'))
+DEPLOYMENT_COMMON_NAMES = ["Cámara Trampa y Grabadoras v 1.0", "Camara Trampa y Grabadoras v 1.0 cumulo", "Camara Trampa y Grabadoras v 1.1 cumulo"]
+#DEPLOYMENT_COMMON_NAMES = ["Camara Trampa y Grabadoras v 1.0 cumulo", "Camara Trampa y Grabadoras v 1.1 cumulo"]
 
-    # login request
-    login = requests.get(os.getenv('KOBO_URL') + "token/?format=json", auth=auth)
-
-    # Session for zendro
-    session = login_to_zendro()
-    survey_type = "deployments"
-    common_name = "Camara Trampa y Grabadoras v 1.1 cumulo"
-    if login.status_code != 200:
-        raise ValueError("Bad Credentials!")
-    # retreive token from response
-    token = json.loads(login.text)['token']
-
-    # set headers for the following requests
+def versioned_kobo_deployments(common_name, survey_type, session, token):
     headers = {
         "Authorization": "Token " + token,
         "Accept": "application/json"
@@ -38,10 +25,17 @@ def kobo_deployments():
 
     # before making another request
     # wait 2 second to not overload the server
+
     time.sleep(2)
     for r in get_data(filtered, headers):
+        kobo_form_name = r["name"]
+
         clean_data = clean_kobo_deployment_report(r)
-        cumulus_name = r["name"].replace(common_name,"").replace(" ","")
+
+        if "cumulo" not in kobo_form_name:
+            cumulus_name = "92"
+        else:
+            cumulus_name = kobo_form_name.replace(common_name,"").replace(" ","")
 
         if cumulus_name == "32":
             for n, d in enumerate(clean_data):
@@ -62,9 +56,29 @@ def kobo_deployments():
         matched_deployments = match_deployment_to_node(clean_data,cumulus_data,session)
 
         for depl in matched_deployments:
-            depl.update({"cumulus_name": cumulus_name})
+            depl.update({"cumulus_name": cumulus_name, "kobo_form_name": kobo_form_name})
             if "coordinates_warning" not in depl:
                 depl.update({"coordinates_warning": None})
+            yield depl
+
+def kobo_deployments():
+    # Auth credentials for Kobo
+    auth = (os.getenv('KOBO_USER'), os.getenv('KOBO_PASSWORD'))
+
+    # login request
+    login = requests.get(os.getenv('KOBO_URL') + "token/?format=json", auth=auth)
+
+    # Session for zendro
+    session = login_to_zendro()
+    survey_type = "deployments"
+    
+    if login.status_code != 200:
+        raise ValueError("Bad Credentials!")
+    # retreive token from response
+    token = json.loads(login.text)['token']
+    
+    for common_name in DEPLOYMENT_COMMON_NAMES:
+        for depl in versioned_kobo_deployments(common_name, survey_type, session, token):
             yield depl
 
 def current_kobo_deployments():

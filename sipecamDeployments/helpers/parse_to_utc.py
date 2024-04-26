@@ -15,10 +15,22 @@ def parse_to_utc(date):
     """
 
     date_parsed = None
+    date_ = date.replace(" ", "")
     try:
-        date_parsed = datetime.strptime(date.replace(" ", ""), "%Y-%m-%dT%H:%M:%S.%f%z")
+        try:
+            date_parsed = datetime.strptime(date_, "%Y-%m-%dT%H:%M:%S.%f%z")
+        except:
+            date_str = date_[:-3] + date_[-2:]
+            try:
+                date_parsed = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f%z")
+            except:
+                date_parsed = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S%z")
     except:
-        date_parsed = datetime.strptime(date.replace(" ", ""), "%Y-%m-%dT%H:%M:%S%z")
+        try:
+            date_parsed = datetime.strptime(date_, "%Y-%m-%dT%H:%M:%S%z")
+        except:
+            date_str = date[:-3] + date[-2:]
+            date_parsed = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f%z")
 
     return (
         date_parsed.astimezone(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]

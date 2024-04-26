@@ -9,6 +9,9 @@ for each type of survey, wheter to be a deployment
 survey, a individual survey, etc.
 
 """
+
+DEPLOYMENT_REPORT_BLACKLIST = [36453, 36461]
+
 def remove_white_spaces(text):
     parts = re.split(r"""("[^"]*"|'[^']*')""", text)
     parts[::2] = map(lambda s: "".join(s.split()), parts[::2]) # outside quotes
@@ -78,31 +81,57 @@ def clean_kobo_deployment_report(survey):
 
     entries = []
     for report in survey["reports"]:
-        # obtaing kay-value pair for gps question in survey
+
+        submitted_by = report["_submitted_by"]
+        if submitted_by == "colectordgpi":
+            # Esto evita que se procesen formularios de prueba realizadas por el equipo de Conabio
+            continue
+        
+        if report["_id"] in DEPLOYMENT_REPORT_BLACKLIST:
+            # Los reportes en este filtro no tienen coordenadas
+            continue
+
         gps = [(key, value) for key, value in report.items() if key.startswith("_Con_cu_l_dispositivo_registra")]
-        deployment_date_utc = parse_to_utc(report["Fecha_y_Hora"])
+        try:
+            deployment_date_utc = parse_to_utc(report["Fecha_y_Hora"])
+        except:
+            print(report["_id"])
+            raise ValueError("Can not parse date")
+    
         kobo_id = report["_id"]
         kobo_formhub_uiid = report["formhub/uuid"]
 
         if "c_mara_trampa" in report["Dispositivo"]:
-            # obtaing kay-value pair for device serial question in survey
-            serial = [(key, value) for key, value in report.items() if key.startswith("Registre_el_n_mero_s_e_la_C_mara_Trampa")]
 
-            if "Registre_la_ubicaci_n_de_la_C_mara" in report.keys():
-                """
-                    If string matches, then cellphone was used for
-                    location record
-                """
-                latlng = [(key, value) for key, value in report.items() if key.startswith("Registre_la_ubicaci_n_de_la_C_mara")]
-                lat = latlng[0][1].split(" ")[0]
-                lng = latlng[0][1].split(" ")[1]
-            else:
-                """
-                    If not, then gps was used for location record,
-                    and so, the lat/long was recorded in two fields
-                """
-                lat = [(key, value) for key, value in report.items() if key.startswith("Latitud_en_grados_de_e_coloc_la")][0][1]
-                lng = [(key, value) for key, value in report.items() if key.startswith("Longitud_en_grados_d_e_coloc_la")][0][1]
+            serial = [(key, value) for key, value in report.items() if key.startswith("Registre_el_n_mero_s_e_la_C_mara_Trampa")]
+            
+            if len(serial) == 0:
+                serial = [(key, value) for key, value in report.items() if key.startswith("Registre_el_c_digo_d_ras_de_C_mara_Trampa")]
+                if len(serial) == 0:
+                    serial = [(key, value) for key, value in report.items() if key.startswith("Registre_el_c_digo_d_o_hasta_que_coincida")]
+                    if len(serial) == 0:
+                        print(report["_id"])
+                        raise ValueError("Can not parse camera's serial")
+
+            try:
+                if "Registre_la_ubicaci_n_de_la_C_mara" in report.keys():
+                    """
+                        If string matches, then cellphone was used for
+                        location record
+                    """
+                    latlng = [(key, value) for key, value in report.items() if key.startswith("Registre_la_ubicaci_n_de_la_C_mara")]
+                    lat = latlng[0][1].split(" ")[0]
+                    lng = latlng[0][1].split(" ")[1]
+                else:
+                    """
+                        If not, then gps was used for location record,
+                        and so, the lat/long was recorded in two fields
+                    """
+                    lat = [(key, value) for key, value in report.items() if key.startswith("Latitud_en_grados_de_e_coloc_la")][0][1]
+                    lng = [(key, value) for key, value in report.items() if key.startswith("Longitud_en_grados_d_e_coloc_la")][0][1]
+            except:
+                print(report["_id"])
+                raise ValueError("Can not parse camera's coordinates")
 
 
             # deployment data dict
@@ -110,6 +139,7 @@ def clean_kobo_deployment_report(survey):
                 "kobo_url": survey["kobo_url"],
                 "kobo_id": kobo_id,
                 "kobo_formhub_uiid": kobo_formhub_uiid,
+                "submitted_by": submitted_by,
                 "date_deployment": deployment_date_utc,
                 "device_type": "camera",
                 "device_code": serial[0][1],
@@ -123,41 +153,53 @@ def clean_kobo_deployment_report(survey):
             entries.append(data)
 
         elif "grabadora_audi" in report["Dispositivo"]:
-            ultrasonic_serial = [(key, value) for key, value in report.items()
-                    if key.startswith("Registre_el_n_mero_s_er_par_de_grabadoras")
-                        or key.startswith("Registre_el_n_mero_s_do_par_de_grabadoras") and "001" in key][0]
-            audible_serial = [(key, value) for key, value in report.items()
-                    if key.startswith("Registre_el_n_mero_s_er_par_de_grabadoras")
-                        or key.startswith("Registre_el_n_mero_s_do_par_de_grabadoras") and "001" not in key][0]
+            try:
+                ultrasonic_serial = [(key, value) for key, value in report.items()
+                        if key.startswith("Registre_el_n_mero_s_er_par_de_grabadoras")
+                            or key.startswith("Registre_el_n_mero_s_do_par_de_grabadoras") and "001" in key][0]
+            except:
+                ultrasonic_serial = (None, None)
+            
+            try:
+                audible_serial = [(key, value) for key, value in report.items()
+                        if key.startswith("Registre_el_n_mero_s_er_par_de_grabadoras")
+                            or key.startswith("Registre_el_n_mero_s_do_par_de_grabadoras") and "001" not in key][0]
+            except:
+                audible_serial = (None, None)
+        
             ultrasonic_config = [(key, value) for key, value in report.items()
                     if key.startswith("Copiar_y_pegar_texto_Sipecam") and "001" in key][0]
             audible_config = [(key, value) for key, value in report.items()
                     if key.startswith("Copiar_y_pegar_texto_Sipecam") and "001" not in key][0]
+            
+            try:
+                if gps[0][1] == "celular__recomendado":
+                    """
+                        If string matches with gqp answer, then cellphone
+                        was used for location record
+                    """
+                    latlng = [(key, value) for key, value in report.items()
+                        if key.startswith("Registre_la_posici_n_er_par_de_grabadoras")
+                            or key.startswith("Registre_la_posici_n_do_par_de_grabadoras")]
 
-            if gps[0][1] == "celular__recomendado":
-                """
-                    If string matches with gqp answer, then cellphone
-                    was used for location record
-                """
-                latlng = [(key, value) for key, value in report.items()
-                    if key.startswith("Registre_la_posici_n_er_par_de_grabadoras")
-                        or key.startswith("Registre_la_posici_n_do_par_de_grabadoras")]
+                    lat = latlng[0][1].split(" ")[0]
+                    lng = latlng[0][1].split(" ")[1]
+                else:
+                    """
+                        If not, then gps was used for location record,
+                        and so, the lat/long was recorded in two fields
+                    """
+                    lat = [(key, value) for key, value in report.items()
+                                if key.startswith("Latitud_en_grados_de_audible_ultras_nica")][0][1]
 
-                lat = latlng[0][1].split(" ")[0]
-                lng = latlng[0][1].split(" ")[1]
-            else:
-                """
-                    If not, then gps was used for location record,
-                    and so, the lat/long was recorded in two fields
-                """
-                lat = [(key, value) for key, value in report.items()
-                            if key.startswith("Latitud_en_grados_de_audible_ultras_nica")][0][1]
-
-                # theres a typo for this question, so in order to obtain the data
-                # if has to check for the two strings, with typo and without it
-                lng = [(key, value) for key, value in report.items()
-                            if key.startswith("Longitud_en_grados_d_audible_ultras_nica")
-                                or key.startswith("Longituden_grados_de_audible_ultras_nica")][0][1]
+                    # theres a typo for this question, so in order to obtain the data
+                    # if has to check for the two strings, with typo and without it
+                    lng = [(key, value) for key, value in report.items()
+                                if key.startswith("Longitud_en_grados_d_audible_ultras_nica")
+                                    or key.startswith("Longituden_grados_de_audible_ultras_nica")][0][1]
+            except:
+                print(report["_id"])
+                raise ValueError("Can not parse recorder's coordinates")
 
             udinfo, udtext, udinfo_warn, udinfo_error = parse_config(ultrasonic_config, "ultrasonic")
             if not udinfo_error:
@@ -165,6 +207,7 @@ def clean_kobo_deployment_report(survey):
                     "kobo_url": survey["kobo_url"],
                     "kobo_id": kobo_id,
                     "kobo_formhub_uiid": kobo_formhub_uiid,
+                    "submitted_by": submitted_by,
                     "date_deployment": deployment_date_utc,
                     "device_type": "sound recorder",
                     "device_code": ultrasonic_serial[1],
@@ -182,6 +225,7 @@ def clean_kobo_deployment_report(survey):
                     "kobo_url": survey["kobo_url"],
                     "kobo_id": kobo_id,
                     "kobo_formhub_uiid": kobo_formhub_uiid,
+                    "submitted_by": submitted_by,
                     "date_deployment": deployment_date_utc,
                     "device_type": "sound recorder",
                     "device_code": ultrasonic_serial[1],
@@ -202,6 +246,7 @@ def clean_kobo_deployment_report(survey):
                     "kobo_url": survey["kobo_url"],
                     "kobo_id": kobo_id,
                     "kobo_formhub_uiid": kobo_formhub_uiid,
+                    "submitted_by": submitted_by,
                     "date_deployment": deployment_date_utc,
                     "device_type": "sound recorder",
                     "device_code": audible_serial[1],
@@ -219,6 +264,7 @@ def clean_kobo_deployment_report(survey):
                     "kobo_url": survey["kobo_url"],
                     "kobo_id": kobo_id,
                     "kobo_formhub_uiid": kobo_formhub_uiid,
+                    "submitted_by": submitted_by,
                     "date_deployment": deployment_date_utc,
                     "device_type": "sound recorder",
                     "device_code": audible_serial[1],
